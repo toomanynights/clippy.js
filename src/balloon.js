@@ -12,8 +12,8 @@ clippy.Balloon = function (targetEl) {
 
 clippy.Balloon.prototype = {
 
-    WORD_SPEAK_TIME:200,
-    CLOSE_BALLOON_DELAY:2000,
+    WORD_SPEAK_TIME:150,
+    CLOSE_BALLOON_DELAY:5000,
 
     _setup:function () {
 
@@ -44,8 +44,13 @@ clippy.Balloon.prototype = {
         var o = this._targetEl.offset();
         var h = this._targetEl.height();
         var w = this._targetEl.width();
-        o.top -= $(window).scrollTop();
-        o.left -= $(window).scrollLeft();
+
+        // Both agent and balloon use position:fixed, so we need viewport-relative coords
+        // offset() returns document-relative coords, so subtract scroll position
+        var scrollTop = $(window).scrollTop();
+        var scrollLeft = $(window).scrollLeft();
+        var targetTop = o.top - scrollTop;
+        var targetLeft = o.left - scrollLeft;
 
         var bH = this._balloon.outerHeight();
         var bW = this._balloon.outerWidth();
@@ -59,23 +64,23 @@ clippy.Balloon.prototype = {
         switch (side) {
             case 'top-left':
                 // right side of the balloon next to the right side of the agent
-                left = o.left + w - bW;
-                top = o.top - bH - this._BALLOON_MARGIN;
+                left = targetLeft + w - bW;
+                top = targetTop - bH - this._BALLOON_MARGIN;
                 break;
             case 'top-right':
                 // left side of the balloon next to the left side of the agent
-                left = o.left;
-                top = o.top - bH - this._BALLOON_MARGIN;
+                left = targetLeft;
+                top = targetTop - bH - this._BALLOON_MARGIN;
                 break;
             case 'bottom-right':
                 // right side of the balloon next to the right side of the agent
-                left = o.left;
-                top = o.top + h + this._BALLOON_MARGIN;
+                left = targetLeft;
+                top = targetTop + h + this._BALLOON_MARGIN;
                 break;
             case 'bottom-left':
                 // left side of the balloon next to the left side of the agent
-                left = o.left + w - bW;
-                top = o.top + h + this._BALLOON_MARGIN;
+                left = targetLeft + w - bW;
+                top = targetTop + h + this._BALLOON_MARGIN;
                 break;
         }
 
@@ -103,6 +108,12 @@ clippy.Balloon.prototype = {
     },
 
     speak:function (complete, text, hold) {
+        // Clear any pending hide timeout before speaking
+        if (this._hiding) {
+            window.clearTimeout(this._hiding);
+            this._hiding = null;
+        }
+        
         this._hidden = false;
         this.show();
         var c = this._content;
@@ -154,7 +165,6 @@ clippy.Balloon.prototype = {
         this._addWord = $.proxy(function () {
             if (!this._active) return;
             if (idx > words.length) {
-                delete this._addWord;
                 this._active = false;
                 if (!this._hold) {
                     complete();
