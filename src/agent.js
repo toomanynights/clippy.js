@@ -161,12 +161,23 @@ clippy.Agent.prototype = {
             return;
         }
 
-        if (this._el.css('top') === 'auto' || !this._el.css('left') === 'auto') {
-            var left = $(window).width() * 0.8;
-            var top = ($(window).height() + $(document).scrollTop()) * 0.8;
-            this._el.css({top:top, left:left});
+        if (this._el.css('top') === 'auto' || this._el.css('left') === 'auto') {
+            // Default to bottom-right with a small margin, without breaking moveTo()
+            var margin = 16;
+            var w = $(window).width();
+            var h = $(window).height();
+            var elW = this._el.outerWidth ? this._el.outerWidth() : 0;
+            var elH = this._el.outerHeight ? this._el.outerHeight() : 0;
+            var left = Math.max(margin, w - elW - margin);
+            var top = Math.max(margin, h - elH - margin);
+            this._el.css({ top: top, left: left });
         }
-
+        
+        // Fade in while playing Show animation
+        this._el.css('opacity', '0');
+        this._el.show();
+        this._el.animate({opacity: 1}, 300);
+        
         this.resume();
         return this.play('Show');
     },
@@ -195,7 +206,7 @@ clippy.Agent.prototype = {
         this._addToQueue(function (complete) {
             this._onQueueEmpty();
             window.setTimeout(complete, time);
-        });
+        }, this);
     },
 
     /***
